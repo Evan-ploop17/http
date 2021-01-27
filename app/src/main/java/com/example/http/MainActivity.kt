@@ -2,16 +2,18 @@
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.os.StrictMode
 import android.util.Log
 import android.widget.Toast
+import com.android.volley.*
+import com.android.volley.toolbox.StringRequest
 import kotlinx.android.synthetic.main.activity_main.*
+import okhttp3.Call
+import okhttp3.OkHttpClient
 import java.io.IOException
-import java.io.InputStream
-import java.net.HttpURLConnection
-import java.net.URL
+import java.lang.Exception
 
  class MainActivity : AppCompatActivity(), CompletedListener {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -26,8 +28,23 @@ import java.net.URL
 
         btnSolicitudHttp.setOnClickListener{
             if(Network.thereIsNetwork(this)){
-                //Log.d("reference", downloadData("https://www.google.com/"))
                 DownloadURL(this ).execute("http://google.com.com")
+            } else{
+                Toast.makeText(this, "Asegurate de que haya red", Toast.LENGTH_LONG).show()
+            }
+        }
+
+        btnVolley.setOnClickListener {
+            if(Network.thereIsNetwork(this)){
+                requestHTTPVolley("http://google.com.com")
+            } else{
+                Toast.makeText(this, "Asegurate de que haya red", Toast.LENGTH_LONG).show()
+            }
+        }
+
+        btnOkHTTP.setOnClickListener {
+            if(Network.thereIsNetwork(this)){
+                requestOkHTTP("http://google.com.com")
             } else{
                 Toast.makeText(this, "Asegurate de que haya red", Toast.LENGTH_LONG).show()
             }
@@ -39,29 +56,41 @@ import java.net.URL
          Log.d("Descarga completa", result)
      }
 
-     // Esto lo comentamos porque ya se esta haciendo en su propio hilo en la clase DownloadURL
+     // Method to Volley. Avoid write more code
+     private fun requestHTTPVolley(url:String){
 
-     /*@Throws(IOException::class)
-     private fun downloadData(url: String): String{
+         val queue = com.android.volley.toolbox.Volley.newRequestQueue(this)
+         val request = StringRequest(Request.Method.GET, url , Response.Listener<String>{
+             response ->
+             try{
+                Log.v("solicitudHTTPVolley", response)
+             }catch (e: Exception){
 
-         // Dos lineas que permiten la ejecucion de slicitudes HTTP en el hilo pincipal, No es recomendable hacerlo
-         val policy = StrictMode.ThreadPolicy.Builder().permitAll().build()
-         StrictMode.setThreadPolicy(policy)
-
-         var inputStream: InputStream? = null
-         try {
-             val url = URL(url)
-             val conn = url.openConnection() as HttpURLConnection
-             conn.requestMethod = "GET"
-             conn.connect()
-
-             inputStream = conn.inputStream
-             return inputStream.bufferedReader().use {
-                 it.readText()
              }
-         }finally {
-             inputStream?.close()
-         }
-     }*/
+         }, Response.ErrorListener {  })
+         queue.add(request)
+     }
 
+     // Method to OkHTTP
+     private fun requestOkHTTP(url: String){
+         val customer = OkHttpClient()
+         val request = okhttp3.Request.Builder().url(url).build()
+         customer.newCall(request).enqueue(object: okhttp3.Callback{
+             override fun onFailure(call: Call, e: IOException) {
+                // En caso de que falle la descarga
+             }
+
+             override fun onResponse(call: Call, response: okhttp3.Response) {
+                 val result = response.body()?.string()
+                 this@MainActivity.runOnUiThread{
+                    try {
+                        Log.v("request", result!!)
+                    }catch(e: Exception){
+
+                    }
+                 }
+             }
+         })
+
+     }
 }
